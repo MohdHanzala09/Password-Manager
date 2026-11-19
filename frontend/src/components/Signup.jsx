@@ -1,5 +1,6 @@
 import {useState} from 'react'
 import { Link ,useNavigate} from 'react-router-dom'
+import { apiUrl } from '../api'
 
 const Signup = () => {
     const navigate = useNavigate();
@@ -17,7 +18,7 @@ const Signup = () => {
     const handleSubmit = async (e) => {
         e.preventDefault()
         console.log('Form submitted')
-        const createPassMnager = await fetch('http://localhost:3000/register', {
+        const createPassMnager = await fetch(apiUrl('register'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

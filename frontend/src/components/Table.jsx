@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { apiUrl } from '../api'
 
 const Table = () => {
     // const [getData, setgetData] = useState(false)
@@ -6,7 +7,7 @@ const Table = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch('http://localhost:3000/userData', {
+                const response = await fetch(apiUrl('userData'), {
                     method: 'GET',
                     credentials: 'include' // Include cookies in the request
                 })

@@ -1,29 +1,26 @@
 import {useState} from 'react'
 import { useNavigate,Link } from 'react-router-dom'
-import {useGoogleLogin } from "@react-oauth/google"
+import { GoogleLogin } from "@react-oauth/google"
+import { apiUrl } from '../api'
+
 const Login = () => {
-    const responseGoolge = async (authresult) => {
+    const handleGoogleLogin = async (credentialResponse) => {
         try {
-            console.log(authresult)
-            if(authresult['code']) {
-            const idToken = credentialResponse.credential;
-            const googleLogin = await fetch('http://localhost:3000/googleLogin', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ token: idToken })
-        });           
-    }
+            if (!credentialResponse.credential) return
+            const response = await fetch(apiUrl('googleLogin'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ token: credentialResponse.credential })
+            })
+            const data = await response.json()
+            if (data.success) navigate('/')
+            else alert(data.message || 'Google login failed')
         } catch (error) {
-            console.log("error while requesting on google :" , error);
+            console.error("Error during Google login:", error)
+            alert('Google login failed')
         }
     }
-    const GoogleLogin = useGoogleLogin({
-        onSuccess: responseGoolge, 
-        onError:responseGoolge, 
-        flow: 'auth-code',
-    })
     const [login, setlogin] = useState({
         email: '',
         password: ''
@@ -38,7 +35,7 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         console.log('Form submitted');
-        const loginUser = await fetch('http://localhost:3000/login', {
+        const loginUser = await fetch(apiUrl('login'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -91,9 +88,7 @@ const Login = () => {
                                 </p>
                             </form>
                             <div className='bg-blue-500 rounded-2xl cursor-pointer p-3 font-bold text-white text-center'>
-                                <button onClick={GoogleLogin}>
-                                Login with google
-                                </button>
+                                <GoogleLogin onSuccess={handleGoogleLogin} onError={() => alert('Google login failed')} />
                             </div>
                         </div>
                     </div>

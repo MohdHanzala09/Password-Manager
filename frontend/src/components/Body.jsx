@@ -3,6 +3,8 @@ import Table from './Table'
 import Navbar from './Navbar'
 import { useNavigate } from 'react-router-dom'
 import Footer from './Footer'
+import { apiUrl } from '../api'
+
 const Body = () => {
     const navigate = useNavigate()
     // const [getData, setgetData] = useState(false)
@@ -14,7 +16,7 @@ const Body = () => {
     
     useEffect(() => {
        async function checkAuth() {
-            const auth = await fetch('http://localhost:3000/checkAuth', {
+            const auth = await fetch(apiUrl('checkAuth'), {
                 method: 'GET',
                 credentials: 'include'
             })
@@ -35,7 +37,7 @@ const Body = () => {
     const handleSubmit = async (e) => {
         e.preventDefault()
         console.log('Form submitted')
-        const createPassMnager = await fetch('http://localhost:3000/createPass', {
+        await fetch(apiUrl('createPass'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

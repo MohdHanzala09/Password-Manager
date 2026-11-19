@@ -1,10 +1,12 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { apiUrl } from '../api'
+
 const Navbar = ({}) => {
   const navigate = useNavigate();
   const handleLogout = async () => {
     try {
-      const logout = await fetch("http://localhost:3000/logout",{
+      const logout = await fetch(apiUrl('logout'),{
         method:"GET",
         credentials:"include",
       })

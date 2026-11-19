@@ -6,34 +6,45 @@ import jwt from "jsonwebtoken";
 import allUsers from "../models/modelpage.js";
 import bcrypt from "bcrypt";
 import { OAuth2Client } from 'google-auth-library'
-const client = new OAuth2Client(process.env.clientID);
 dotenv.config();
+const client = new OAuth2Client(process.env.clientID);
 
 const router = express.Router();   
+const cookieSameSite = process.env.COOKIE_SAME_SITE || "lax";
+const cookieSecure = process.env.COOKIE_SECURE === "true";
 
-router.post("googleLogin", async (req,res) => {
+router.post("/googleLogin", async (req,res) => {
     const token = req.body.token;
     if (!token) {
     return res.status(400).json({ message: "Token is required" });
   }
-    try{
+    try {
         const ticket = await client.verifyIdToken({
             idToken:token,
             audience:process.env.clientID,
         })
-         const { userName,email } = req.body;
-            if (!userName || !email ) {
-                return res.status(400).json({ message: "Username, email, and password are required" });
-            }
-            const existingUser = await allUsers.findOne({ email });
-            if (existingUser) {
-                const accessToken = jwt.sign(email , process.env.JWT_SECRET);
-                res.cookie("tokens", accessToken)
-            }
-            return res.status(200).json({ message: "Login successful" ,success:true});
-    } catch {
-        console.log("error while login : " , error);
-        return res.status(404).json({ message: "Login unsuccessful" ,success:false});
+        const payload = ticket.getPayload();
+        if (!payload?.email) {
+            return res.status(401).json({ message: "Google account email is unavailable", success:false});
+        }
+        let user = await allUsers.findOne({ email: payload.email });
+        if (!user) {
+            user = await allUsers.create({
+                userName: payload.name || payload.email.split("@")[0],
+                email: payload.email,
+                password: await bcrypt.hash(payload.sub, 14),
+            });
+        }
+        const accessToken = jwt.sign({ email: user.email, id: user._id }, process.env.JWT_SECRET);
+        res.cookie("token", accessToken, {
+            httpOnly: true,
+            sameSite: cookieSameSite,
+            secure: cookieSecure,
+        });
+        return res.status(200).json({ message: "Login successful" ,success:true});
+    } catch (error) {
+        console.error("Error during Google login:", error);
+        return res.status(401).json({ message: "Google login unsuccessful" ,success:false});
     }
 })
 
@@ -58,7 +69,11 @@ router.post("/login", async (req, res) => {
                 id: userwithEmail._id,
             };
             const accessToken = jwt.sign(user, process.env.JWT_SECRET);
-            res.cookie("token", accessToken, { httpOnly: true, sameSite: "lax" });
+            res.cookie("token", accessToken, {
+                httpOnly: true,
+                sameSite: cookieSameSite,
+                secure: cookieSecure,
+            });
             return res.status(200).json({ message: "Login successful" ,success:true});
     } catch (error) {
         console.error("Error during login:", error);
@@ -108,6 +123,7 @@ router.post("/createPass",async(req, res) => {
             password,
             objectId: userId,
         });
+        return res.status(201).json({ message: "Password saved successfully", createPass });
     } catch (error) {
         console.error("Error during password creation:", error);
         return res.status(500).json({ message: "Internal server error" });    
@@ -162,7 +178,11 @@ router.get("/logout",(req,res) => {
         if(!decoded){
             return res.status(401).json({msg:"invalid token",success:false})
         }
-        res.cookie("token"," ",{expiresIn:Date.now()})
+        res.clearCookie("token", {
+            httpOnly: true,
+            sameSite: cookieSameSite,
+            secure: cookieSecure,
+        });
         return res.status(201).json({msg:"Logout successfully", success:true})
     } catch (error) {
         console.log("error",error.message)
